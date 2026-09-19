@@ -1,0 +1,12 @@
+numpy
+Pillow
+opencv-python
+scipy
+scikit-image
+torch
+torchvision
+tqdm
+
+# VoroPlex is required for the directional Voronoi version.
+# Install VoroPlex separately before running
+# voronoi_main_voroplex_directional.py.
