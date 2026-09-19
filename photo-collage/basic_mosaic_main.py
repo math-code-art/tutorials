@@ -53,14 +53,19 @@ TARGET_LONG_EDGE = 2400
 
 # Smaller than the previous 32px baseline.
 # Gives a finer but still clearly uniform grid.
-CELL_SIZE = 24
-
+CELL_SIZE = 40
 # Exhibition-quality master.
 PRINT_LONG_EDGE = 24000
 PRINT_DPI = 300
 
 # Controls RAM usage during RGB matching only.
 MATCH_BATCH = 64
+
+# Light appearance correction for the Basic Mosaic.
+# Tile selection remains mean-RGB based; this only corrects
+# the rendered tile toward the target cell color.
+COLOR_TRANSFER_ALPHA = 0.72
+SATURATION_BOOST = 1.12
 
 # ============================================================
 # TILE DIVERSITY / REUSE CONTROL
@@ -1017,6 +1022,54 @@ def rgb_error_map(
     )
 
 
+def apply_basic_color_adjustment(
+    tile_arr: np.ndarray,
+    target_rgb: np.ndarray,
+) -> np.ndarray:
+    """
+    Light post-match color correction for the Basic Mosaic.
+
+    The selected source tile is preserved, but its mean color is shifted
+    part-way toward the target cell mean. A small saturation adjustment
+    keeps the target palette visually clear.
+    """
+    tile = tile_arr.astype(np.float32)
+
+    src_mean = tile.mean(axis=(0, 1), keepdims=True)
+    tgt_mean = np.asarray(
+        target_rgb,
+        dtype=np.float32,
+    ).reshape(1, 1, 3)
+
+    adjusted = (
+        tile
+        + COLOR_TRANSFER_ALPHA
+        * (tgt_mean - src_mean)
+    )
+
+    adjusted = np.clip(
+        adjusted,
+        0.0,
+        255.0,
+    )
+
+    if SATURATION_BOOST != 1.0:
+        gray = adjusted.mean(
+            axis=2,
+            keepdims=True,
+        )
+        adjusted = (
+            gray
+            + SATURATION_BOOST
+            * (adjusted - gray)
+        )
+
+    return np.clip(
+        adjusted,
+        0.0,
+        255.0,
+    ).astype(np.uint8)
+
 # ============================================================
 # WORKING-RESOLUTION MOSAIC
 # ============================================================
@@ -1026,6 +1079,7 @@ def render_working_mosaic(
     hires_cache: np.ndarray,
     hires_cache_valid: bool,
     chosen: np.ndarray,
+    target_means: np.ndarray,
 ) -> np.ndarray:
 
     rows, cols = chosen.shape
@@ -1109,10 +1163,15 @@ def render_working_mosaic(
                 chosen[r, c]
             )
 
+            adjusted = apply_basic_color_adjustment(
+                selected_cache[idx],
+                target_means[r, c],
+            )
+
             canvas[
                 y0:y0 + CELL_SIZE,
                 x0:x0 + CELL_SIZE,
-            ] = selected_cache[idx]
+            ] = adjusted
 
     return canvas
 
@@ -1154,6 +1213,7 @@ def get_print_dimensions(
 def render_print(
     tile_paths: list[str],
     chosen: np.ndarray,
+    target_means: np.ndarray,
     work_w: int,
     work_h: int,
     output_path: Path,
@@ -1247,6 +1307,12 @@ def render_print(
             upscale_count += int(
                 was_upscaled
             )
+
+            tile_arr = apply_basic_color_adjustment(
+                np.asarray(tile, dtype=np.uint8),
+                target_means[r, c],
+            )
+            tile = Image.fromarray(tile_arr)
 
             canvas.paste(
                 tile,
@@ -1539,6 +1605,7 @@ def process_target(
         hires_cache,
         hires_cache_valid,
         chosen,
+        target_means,
     )
 
     final_path = (
@@ -1603,6 +1670,7 @@ def process_target(
         upscale_count = render_print(
             tile_paths,
             chosen,
+            target_means,
             w,
             h,
             print_path,
@@ -1790,6 +1858,44 @@ def main() -> None:
             hires_size,
             "hires",
         )
+    )
+
+    # --------------------------------------------------------
+    # Match mean RGB against the SAME tile representation used
+    # for standard rendering.
+    # --------------------------------------------------------
+
+    print("[basic] computing mean RGB from rendering cache")
+
+    tile_means = np.empty(
+        (len(hires_cache), 3),
+        dtype=np.float32,
+    )
+
+    mean_batch = 512
+
+    for start in range(
+        0,
+        len(hires_cache),
+        mean_batch,
+    ):
+        end = min(
+            start + mean_batch,
+            len(hires_cache),
+        )
+
+        batch = np.asarray(
+            hires_cache[start:end],
+            dtype=np.float32,
+        )
+
+        tile_means[start:end] = batch.mean(
+            axis=(1, 2),
+        )
+
+    print(
+        f"[basic] rendering-cache RGB means ready: "
+        f"{tile_means.shape}"
     )
 
     # --------------------------------------------------------
