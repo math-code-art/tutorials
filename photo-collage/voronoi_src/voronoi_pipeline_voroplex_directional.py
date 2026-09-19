@@ -302,52 +302,55 @@ class VoroPlexDirectionalMosaicPipeline:
         # Step 7 - high-resolution print render
         # ------------------------------------------------------------
 
-        print(
-            "\n[voroplex directional] "
-            "step 7 - high-resolution print render"
-        )
-
-        if not self.tile_paths:
-            raise RuntimeError(
-                "tile_paths missing for "
-                "original-source print render"
+        if (
+            getattr(self, "tile_paths", None)
+            and os.path.isfile(self.tile_paths[0])
+        ):
+            print(
+                "\n[voroplex directional] "
+                "step 7 - high-resolution print render"
             )
 
-        print_mosaic = render_voronoi_mosaic_print(
-            target_img=target_img,
-            tile_paths=self.tile_paths,
-            label_map=label_map,
-            cell_tile_indices=cell_tile_indices,
-            polygons=polygons,
-            output_long_edge=cfg["print_long_edge"],
-            color_transfer_alpha=cfg["color_transfer_alpha"],
-            grout_color=cfg["grout_color"],
-            grout_width=cfg["grout_width"],
-        )
+            print_mosaic = render_voronoi_mosaic_print(
+                target_img=target_img,
+                tile_paths=self.tile_paths,
+                label_map=label_map,
+                cell_tile_indices=cell_tile_indices,
+                polygons=polygons,
+                output_long_edge=cfg["print_long_edge"],
+                color_transfer_alpha=cfg["color_transfer_alpha"],
+                grout_color=cfg["grout_color"],
+                grout_width=cfg["grout_width"],
+            )
 
-        print_h, print_w = print_mosaic.shape[:2]
+            print_h, print_w = print_mosaic.shape[:2]
 
-        print_path = os.path.join(
-            os.path.dirname(output_dir),
-            (
-                f"{target_name}_voroplex_directional_PRINT_"
-                f"{print_w}x{print_h}_300dpi.png"
-            ),
-        )
+            print_path = os.path.join(
+                os.path.dirname(output_dir),
+                (
+                    f"{target_name}_voroplex_directional_PRINT_"
+                    f"{print_w}x{print_h}_300dpi.png"
+                ),
+            )
 
-        Image.fromarray(
-            print_mosaic.astype(np.uint8)
-        ).save(
-            print_path,
-            format="PNG",
-            dpi=(
-                cfg["print_dpi"],
-                cfg["print_dpi"],
-            ),
-            compress_level=1,
-        )
+            Image.fromarray(
+                print_mosaic.astype(np.uint8)
+            ).save(
+                print_path,
+                format="PNG",
+                dpi=(
+                    cfg["print_dpi"],
+                    cfg["print_dpi"],
+                ),
+                compress_level=1,
+            )
 
-        print(f"[save PRINT] {print_path}")
+            print(f"[save PRINT] {print_path}")
+        else:
+            print()
+            print("[PRINT] Original source dataset not found.")
+            print("[PRINT] Standard VoroPlex mosaic was generated from cache.")
+            print("[PRINT] Skipping full-resolution 300 DPI PRINT output.")
 
         summary = {
             "target_name": target_name,

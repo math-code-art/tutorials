@@ -6,8 +6,6 @@ __pycache__/
 *.before_*
 *backup*
 *.log
-*.npy
-*.npz
 *.egg-info/
 build/
 dist/
@@ -19,6 +17,5 @@ target_opt/
 
 data/wikiart/
 data/wikiart_raw/
-data/cache/
 data/basic_uniform_cache/
 data/cache_before_highres_*/

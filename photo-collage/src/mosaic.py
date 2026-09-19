@@ -329,16 +329,21 @@ def build_mosaic(target_img, target_path, tile_cache_small, hires_cache,
 
     _print_tile_paths = _get_tile_paths(max_tiles=config.POOL_TILES)
 
-    _render_original_tile_print_master(
-        target_img=target_img,
-        blocks=blocks,
-        chosen_indices=chosen_indices,
-        tile_paths=_print_tile_paths,
-        original_name=original_name,
-        output_dir=config.OUTPUT_DIR,
-        output_long_edge=int(getattr(config, "PRINT_LONG_EDGE", 24000)),
-        dpi=int(getattr(config, "PRINT_DPI", 300)),
-    )
+    if _print_tile_paths and os.path.isfile(_print_tile_paths[0]):
+        _render_original_tile_print_master(
+            target_img=target_img,
+            blocks=blocks,
+            chosen_indices=chosen_indices,
+            tile_paths=_print_tile_paths,
+            original_name=original_name,
+            output_dir=config.OUTPUT_DIR,
+            output_long_edge=int(getattr(config, "PRINT_LONG_EDGE", 24000)),
+            dpi=int(getattr(config, "PRINT_DPI", 300)),
+        )
+    else:
+        print("[PRINT main] Original source dataset not found.")
+        print("[PRINT main] Standard Split + VGG mosaic was generated from cache.")
+        print("[PRINT main] Skipping full-resolution 300 DPI PRINT output.")
 
     print(f"[mosaic] done! saved: {final_path}")
     print(f"[mosaic] intermediate steps saved in: {steps_dir}")

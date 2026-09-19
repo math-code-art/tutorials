@@ -242,6 +242,30 @@ def validate_cache_order(
 
     n = len(tile_paths)
 
+    originals_available = (
+        n > 0
+        and Path(tile_paths[0]).is_file()
+    )
+
+    if not originals_available:
+        valid = (
+            len(cache) == n
+            and cache.ndim == 4
+        )
+
+        if valid:
+            print(
+                f"[check] {label} cache accepted: "
+                "original dataset not installed; using precomputed cache"
+            )
+        else:
+            print(
+                f"[check] {label} cache rejected: "
+                "cache shape/count mismatch"
+            )
+
+        return valid
+
     sample_ids = np.unique(
         np.linspace(
             0,
@@ -377,7 +401,7 @@ def get_basic_rgb_means(
     )
 
     current_order = "\n".join(
-        str(Path(p).resolve())
+        Path(p).name
         for p in tile_paths
     )
 
@@ -1553,35 +1577,53 @@ def process_target(
     # PRINT MASTER
     # --------------------------------------------------------
 
-    print_w, print_h = (
-        get_print_dimensions(
+    original_sources_available = (
+        bool(tile_paths)
+        and Path(tile_paths[0]).is_file()
+    )
+
+    if original_sources_available:
+        print_w, print_h = (
+            get_print_dimensions(
+                w,
+                h,
+            )
+        )
+
+        print_path = (
+            OUTPUT_DIR
+            / (
+                f"{name}_basic_mosaic_"
+                f"PRINT_"
+                f"{print_w}x{print_h}_"
+                f"{PRINT_DPI}dpi.png"
+            )
+        )
+
+        upscale_count = render_print(
+            tile_paths,
+            chosen,
+            w,
+            h,
+            print_path,
+        )
+
+        print(
+            f"[PRINT saved] "
+            f"{print_path}"
+        )
+
+    else:
+        print_w, print_h = get_print_dimensions(
             w,
             h,
         )
-    )
+        upscale_count = 0
 
-    print_path = (
-        OUTPUT_DIR
-        / (
-            f"{name}_basic_mosaic_"
-            f"PRINT_"
-            f"{print_w}x{print_h}_"
-            f"{PRINT_DPI}dpi.png"
-        )
-    )
-
-    upscale_count = render_print(
-        tile_paths,
-        chosen,
-        w,
-        h,
-        print_path,
-    )
-
-    print(
-        f"[PRINT saved] "
-        f"{print_path}"
-    )
+        print()
+        print("[PRINT] Original source dataset not found.")
+        print("[PRINT] Standard Basic mosaic was generated from cache.")
+        print("[PRINT] Skipping full-resolution 300 DPI PRINT output.")
 
     # --------------------------------------------------------
     # Summary
