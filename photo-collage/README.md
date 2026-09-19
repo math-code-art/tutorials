@@ -1,277 +1,151 @@
-# Photomosaic Generation
+# Photo Collage
 
-This folder contains three photomosaic generation methods:
+Generate your own photomosaic from a JPG or PNG image using one of three methods:
 
-1. Basic Mosaic
-2. Split + VGG Mosaic
-3. Directional VoroPlex Mosaic
+1. **Basic Mosaic** — uniform square grid with mean RGB matching.
+2. **Split + VGG Mosaic** — adaptive quadtree splitting with VGG feature matching.
+3. **Directional VoroPlex Mosaic** — directional Voronoi cells with feature-based tile matching.
 
-## 1. Install Dependencies
+The repository includes precomputed caches for **81,444 source tiles**, so the original source-image dataset is not required for standard mosaic generation.
 
-Enter the project folder:
+## Download
 
-```bash
-cd photo-collage
-```
+This project uses **Git LFS** for the precomputed cache files.
 
-Install the required Python packages:
+For the most reliable setup, clone the repository with Git:
 
-```bash
-pip install -r requirements.txt
-```
+    git lfs install
+    git clone https://github.com/math-code-art/tutorials.git
+    cd tutorials/photo-collage
+    git lfs pull
 
-The VoroPlex version also requires the `voroplex` package to be installed separately.
+The cache download is approximately 1.3 GB.
 
-You can check whether VoroPlex is available with:
+## Install Dependencies
 
-```bash
-python -c "import voroplex; print('VoroPlex installed')"
-```
+From the `photo-collage` directory:
 
----
+    python -m pip install -r requirements.txt
 
-## 2. Prepare the Dataset
+The **Directional VoroPlex Mosaic** also requires the external VoroPlex Python package to be installed separately.
 
-Create the dataset folder:
+The Split + VGG and VoroPlex methods use pretrained VGG features. Torchvision may download pretrained VGG weights the first time they are needed.
 
-```bash
-mkdir -p data/wikiart
-```
+## Add Your Target Image
 
-Place all source images inside:
+Create the target directory if needed:
 
-```text
-data/wikiart/
-```
+    mkdir -p targets
+
+Place your JPG or PNG image inside:
+
+    targets/
 
 For example:
 
-```text
-data/
-└── wikiart/
-    ├── image1.jpg
-    ├── image2.jpg
-    ├── image3.jpg
-    └── ...
-```
+    targets/my_photo.jpg
 
-JPG, JPEG, and PNG images are supported.
+## Run
 
----
+### Basic Mosaic
 
-## 3. Add a Target Image
+Uniform square grid with mean RGB tile matching.
 
-Create the target folder:
+    python basic_mosaic_main.py
 
-```bash
-mkdir -p targets
-```
+### Split + VGG Mosaic
 
-Place the image you want to convert into a photomosaic inside:
+Adaptive quadtree splitting with VGG feature matching.
 
-```text
-targets/
-```
+    python main.py
 
-For example:
+### Directional VoroPlex Mosaic
 
-```text
-targets/
-└── bird.jpg
-```
+Directional Voronoi photomosaic.
 
-For the easiest workflow, use one target image at a time.
+    python voronoi_main_voroplex_directional.py
 
----
+VoroPlex must be installed separately before running this method.
 
-## 4. Run the Basic Mosaic
+## Output
 
-```bash
-python basic_mosaic_main.py
-```
+Generated results are saved in:
 
-This generates the basic uniform-grid photomosaic.
+    outputs/
 
----
+Each method creates its own mosaic output and process files.
 
-## 5. Run the Split + VGG Mosaic
+## Included Precomputed Cache
 
-```bash
-python main.py
-```
+The repository includes the cache files required for standard mosaic generation:
 
-The first run may take longer because image caches and VGG features need to be generated.
+    data/cache/
 
-Later runs can reuse the saved caches.
+Main cache files:
 
----
+    basic_mean_rgb_N81444.npy
+    basic_mean_rgb_paths_N81444.txt
+    embeddings_cut16_N81444.npy
+    embeddings_cut22_N81444.npy
+    tiles_hires64_N81444.npy
+    tiles_small16_N81444.npy
 
-## 6. Run the Directional VoroPlex Mosaic
+The cache preserves the ordering of all 81,444 source tiles.
 
-Make sure VoroPlex is installed first.
+Because this cache is included, users do not need the original image collection to generate the normal mosaic output.
 
-Then run:
+## High-Resolution PRINT Output
 
-```bash
-python voronoi_main_voroplex_directional.py
-```
+The standard mosaic uses the included precomputed cache.
 
-This version may take several minutes because it includes geometry optimization.
+The optional high-resolution PRINT output works differently. It reloads the original JPG or PNG source tiles so that the final print is rendered from the original images instead of enlarging the cached 64 px versions.
 
----
+If the original source-image dataset is not installed:
 
-## 7. Results
+    standard mosaic        -> generated normally
+    high-resolution PRINT  -> skipped automatically
 
-Generated images are saved in:
+To enable the high-resolution PRINT output, place the matching original source-image collection in:
 
-```text
-outputs/
-```
+    data/wikiart/
 
-Each method produces a regular output image and a high-resolution print version.
+Then run the same mosaic script again.
 
-High-resolution files contain:
+The PRINT version is generated at approximately:
 
-```text
-PRINT
-```
+    24000 px long edge
+    300 DPI
 
-in the filename, for example:
-
-```text
-bird_basic_mosaic_PRINT_24000x15840_300dpi.png
-```
-
-Use the `PRINT` file for the highest-resolution result.
-
----
-
-## Project Structure
-
-```text
-photo-collage/
-├── README.md
-├── requirements.txt
-├── config.py
-├── basic_mosaic_main.py
-├── main.py
-├── voronoi_main_voroplex_directional.py
-├── src/
-├── voronoi_src/
-├── data/
-│   └── wikiart/
-└── targets/
-```
+The original dataset is optional and is only required for the full-resolution PRINT output.
 
 ## Quick Start
 
-```bash
-cd photo-collage
+After cloning the repository:
 
-pip install -r requirements.txt
+    cd tutorials/photo-collage
+    git lfs pull
+    python -m pip install -r requirements.txt
+    mkdir -p targets
 
-mkdir -p data/wikiart
-mkdir -p targets
-```
+Put your JPG or PNG image in `targets/`.
 
-Add source images to:
+Then choose one method:
 
-```text
-data/wikiart/
-```
+    python basic_mosaic_main.py
 
-Add a target image to:
+or:
 
-```text
-targets/
-```
+    python main.py
 
-Then choose one of:
+or, after installing VoroPlex:
 
-```bash
-python basic_mosaic_main.py
-```
+    python voronoi_main_voroplex_directional.py
 
-```bash
-python main.py
-```
+The generated mosaic will appear in `outputs/`.
 
-```bash
-python voronoi_main_voroplex_directional.py
-```
+## Notes
 
-Results will appear in:
-
-```text
-outputs/
-```
-## Precomputed Cache
-
-Precomputed cache files are included in:
-
-```text
-data/cache/
-```
-
-The cache files can significantly reduce preprocessing time because they
-contain precomputed resized tiles, mean-RGB values, and VGG feature embeddings.
-
-However, **the cache files do not replace the original source-image dataset**.
-
-The original source images are still required in:
-
-```text
-data/wikiart/
-```
-
-The dataset must correspond to the same source-image collection used to
-generate the provided cache.
-
-### Important
-
-If you only have the cache files but do not have the original source images,
-you will **not** be able to generate the full high-resolution final output
-correctly.
-
-The high-resolution `PRINT` versions reload the original source images and
-render them directly at print resolution.
-
-For example:
-
-```text
-*_PRINT_24000x..._300dpi.png
-```
-
-uses the original images from:
-
-```text
-data/wikiart/
-```
-
-rather than enlarging the low-resolution cached tiles.
-
-Therefore:
-
-```text
-Code + original dataset + cache
-    -> fastest workflow
-    -> full high-resolution PRINT output
-
-Code + original dataset only
-    -> works
-    -> caches will be rebuilt automatically
-    -> full high-resolution PRINT output
-
-Code + cache only
-    -> not sufficient for the current pipeline
-    -> original source images are still required
-```
-
-For best results, download the original dataset and place it in:
-
-```text
-photo-collage/data/wikiart/
-```
-
-Then the provided cache can be reused to avoid rebuilding the expensive
-preprocessing and VGG features.
+- The original 81,444-image source dataset is **not required** for standard mosaic generation.
+- The included Git LFS cache is sufficient for normal rendering.
+- The original dataset is only needed for the optional 300 DPI full-resolution PRINT output.
+- Do not change the ordering of the cache files or the accompanying tile manifest.

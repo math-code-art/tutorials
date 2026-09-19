@@ -22,9 +22,28 @@ def get_tile_paths(max_tiles=None):
     if max_tiles is not None:
         all_paths = all_paths[:max_tiles]
     if not all_paths:
-        print("[dataset] no images found, will use existing cache")
+        print("[dataset] original source images not found; using precomputed cache ordering")
         n = max_tiles if max_tiles is not None else (config.POOL_TILES or 81444)
-        return [str(i) for i in range(n)]
+        manifest_path = os.path.join(
+            config.CACHE_DIR,
+            f"basic_mean_rgb_paths_N{n}.txt",
+        )
+        if os.path.isfile(manifest_path):
+            with open(manifest_path, "r") as f:
+                names = [line.strip() for line in f if line.strip()]
+            if len(names) != n:
+                raise RuntimeError(
+                    f"Portable cache manifest has {len(names)} entries; expected {n}"
+                )
+            tile_paths = [
+                os.path.join(config.DATA_DIR, os.path.basename(name))
+                for name in names
+            ]
+            print(f"[dataset] loaded portable cache ordering: {len(tile_paths)} tiles")
+            return tile_paths
+        raise RuntimeError(
+            f"Original dataset not found and cache ordering manifest is missing: {manifest_path}"
+        )
     print(f"[dataset] found {len(all_paths)} tile images")
     return all_paths
 
